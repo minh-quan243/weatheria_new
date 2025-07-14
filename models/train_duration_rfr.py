@@ -29,35 +29,39 @@ X_train, X_test, y_train, y_test = train_test_split(
     X_scaled, y, test_size=0.2, random_state=42
 )
 
-# 5️⃣ Huấn luyện Random Forest
+# 5️⃣ Huấn luyện Random Forest đã tối ưu tham số
 model = RandomForestRegressor(
-    n_estimators=200,
-    max_depth=12,
+    n_estimators=400,
+    max_depth=16,
+    min_samples_split=5,
+    min_samples_leaf=2,
+    max_features='sqrt',
+    bootstrap=True,
     random_state=42,
     n_jobs=-1
 )
 model.fit(X_train, y_train)
 
-# 6️⃣ Dự đoán và đánh giá
+# 6️⃣ Đánh giá
 y_pred = model.predict(X_test)
 mae = mean_absolute_error(y_test, y_pred)
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
-print("📊 Đánh giá mô hình Random Forest:")
+print("Đánh giá mô hình Random Forest (đã chỉnh):")
 print(f"▪️ MAE: {mae:.2f}")
 print(f"▪️ MSE: {mse:.2f}")
 print(f"▪️ R²: {r2:.2f}")
 
-# 7️⃣ Lưu mô hình và scaler
+# 7️⃣ Lưu model và scaler
 os.makedirs("model_use", exist_ok=True)
 joblib.dump(model, "model_use/duration_rf_model.pkl")
 joblib.dump(scaler, "model_use/duration_scaler.pkl")
-print("✅ Đã lưu model và scaler.")
+print("✅ Đã lưu model và scaler vào thư mục model_use/")
 
 # 8️⃣ Trực quan hóa
 
-# 🎯 Dự đoán vs Thực tế
+# Dự đoán vs Thực tế
 plt.figure(figsize=(6, 5))
 sns.scatterplot(x=y_test, y=y_pred, alpha=0.6)
 plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--')
@@ -67,18 +71,18 @@ plt.title("Random Forest: Dự đoán vs Thực tế")
 plt.tight_layout()
 plt.show()
 
-# 📈 Phân phối lỗi
+# Phân phối lỗi
 errors = y_test - y_pred
 plt.figure(figsize=(6, 4))
 sns.histplot(errors, bins=40, kde=True, color="orange")
-plt.title("Phân phối lỗi dự đoán (RF)")
+plt.title("Phân phối lỗi dự đoán (Random Forest)")
 plt.xlabel("Lỗi (giờ)")
 plt.tight_layout()
 plt.show()
 
-# 📊 Feature importance
+# Feature importance
 plt.figure(figsize=(8, 5))
 sns.barplot(x=model.feature_importances_, y=features, color="teal")
-plt.title("Feature Importance (Random Forest)")
+plt.title("Độ quan trọng của các đặc trưng (Random Forest)")
 plt.tight_layout()
 plt.show()

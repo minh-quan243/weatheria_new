@@ -4,12 +4,13 @@ import joblib
 import pandas as pd
 import shap
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 # 📌 Danh sách cột đặc trưng dùng chung cho tất cả model
 FEATURE_COLUMNS = ['Rain', 'Temp', 'WindSpeed', 'Pressure', 'Humidity', 'CloudCover', 'WindDirection']
 
 # Load models
-model_onset = joblib.load('models/model_use/onset_model_random_forest.pkl')
+model_onset = joblib.load('models/model_use/onset_model_xgboost.pkl')
 model_intensity = joblib.load('models/model_use/storm_intensity_xgboost.pkl')
 model_regression = joblib.load('models/model_use/regression_xgboost_maxwind.pkl')
 model_duration = joblib.load('models/model_use/duration_rf_model.pkl')
@@ -38,7 +39,11 @@ def get_weather_data_current(lat, lon):
     data = response.json()
     df = pd.DataFrame(data['hourly'])
     df['time'] = pd.to_datetime(df['time'])
-    return df.iloc[-1]  # Lấy thời điểm mới nhất
+
+    # ⏰ Lọc thời điểm gần nhất với thời gian thực tế (giờ hệ thống)
+    now = pd.Timestamp.now(tz=df['time'].dt.tz)  # dùng timezone giống API trả về
+    closest_row = df.iloc[(df['time'] - now).abs().argsort().iloc[0]]
+    return closest_row
 
 # Chuẩn hóa input theo đúng danh sách cột cố định
 def prepare_features(row):
