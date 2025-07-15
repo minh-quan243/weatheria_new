@@ -103,6 +103,23 @@ if all_dfs:
     ).reset_index()
     result_wide = pivot.merge(meta_cols, on=['City', 'Datetime'], how='left')
 
+    # Thêm cột tháng và mùa
+    result_wide["Datetime"] = pd.to_datetime(result_wide["Datetime"])
+    result_wide["Month"] = result_wide["Datetime"].dt.month
+
+    # Hàm gán mùa theo tháng
+    def assign_season(month):
+        if month in [12, 1, 2]:
+            return "Winter"
+        elif month in [3, 4, 5]:
+            return "Spring"
+        elif month in [6, 7, 8]:
+            return "Summer"
+        elif month in [9, 10, 11]:
+            return "Autumn"
+
+    result_wide["Season"] = result_wide["Month"].apply(assign_season)
+
     # Đảm bảo thư mục lưu trữ tồn tại
     save_path = 'D:\\Pycharm\\weather-new\\data\\Raw'
     os.makedirs(save_path, exist_ok=True)

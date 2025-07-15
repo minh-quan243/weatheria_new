@@ -70,15 +70,31 @@ for city, group in weather_gdf.groupby("City"):
 # ✅ 6. Tạo DataFrame mới với nhãn
 duration_df = pd.DataFrame(rows)
 
-# ✅ 7. Chỉ giữ lại các cột cần thiết
+# ✅ 7. Thêm cột tháng và mùa
+duration_df["Month"] = duration_df["Datetime"].dt.month
+
+def assign_season(month):
+    if month in [12, 1, 2]:
+        return "Winter"
+    elif month in [3, 4, 5]:
+        return "Spring"
+    elif month in [6, 7, 8]:
+        return "Summer"
+    else:
+        return "Autumn"
+
+duration_df["Season"] = duration_df["Month"].apply(assign_season)
+
+# ✅ 8. Chỉ giữ lại các cột cần thiết
 cols_to_keep = [
     'Datetime', 'City', 'Latitude', 'Longitude',
     'Rain', 'Temp', 'WindSpeed', 'Pressure', 'Humidity',
-    'CloudCover', 'WindDirection', 'duration_in_storm', 'storm_id'
+    'CloudCover', 'WindDirection', 'duration_in_storm', 'storm_id',
+    'Month', 'Season'
 ]
 duration_df = duration_df[cols_to_keep]
 
-# ✅ 8. Lưu ra file
+# ✅ 9. Lưu ra file
 out_path = "D:/Pycharm/weather-new/data/Processed/Duration/storm_duration_dataset.csv"
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 duration_df.to_csv(out_path, index=False, encoding="utf-8-sig")
@@ -96,7 +112,7 @@ plt.show()
 
 # 🔍 Ma trận tương quan các biến
 plt.figure(figsize=(10, 8))
-corr_matrix = duration_df.drop(columns=["Datetime", "City", "storm_id"]).corr()
+corr_matrix = duration_df.drop(columns=["Datetime", "City", "storm_id", "Season"]).corr()
 sns.heatmap(corr_matrix, annot=True, cmap="YlGnBu", fmt=".2f", linewidths=0.5)
 plt.title("Ma trận tương quan giữa các biến đầu vào và nhãn")
 plt.tight_layout()

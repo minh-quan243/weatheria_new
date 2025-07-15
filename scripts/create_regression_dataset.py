@@ -29,20 +29,14 @@ storm_gdf = gpd.read_file("D:/Pycharm/weather-new/data/Raw/storm_buffers_with_ti
 storm_gdf = storm_gdf.to_crs("EPSG:4326")
 
 # Mở rộng vùng bão nhẹ (~20km)
-# Chuyển sang hệ tọa độ phẳng (đơn vị: mét) – Web Mercator
 storm_gdf_proj = storm_gdf.to_crs(epsg=3857)
-
-# Buffer bán kính 20km = 20000m
 storm_gdf_proj["geometry"] = storm_gdf_proj.buffer(20000)
-
-# Đổi về lại hệ địa lý
 storm_gdf = storm_gdf_proj.to_crs(epsg=4326)
-
 
 # =======================
 # 🌀 3. Gán nhãn max_wind
 # =======================
-weather_gdf["max_wind"] = weather_df["WindSpeed"]  # mặc định = 0 nếu không ảnh hưởng bão
+weather_gdf["max_wind"] = weather_df["WindSpeed"]  # mặc định = WindSpeed ban đầu
 
 print("✅ Đang gán nhãn max_wind...")
 for idx, storm in tqdm(storm_gdf.iterrows(), total=storm_gdf.shape[0]):
@@ -55,12 +49,28 @@ for idx, storm in tqdm(storm_gdf.iterrows(), total=storm_gdf.shape[0]):
     mask_space = weather_gdf["geometry"].within(geometry)
     affected_idx = weather_gdf[mask_time & mask_space].index
 
-    # Chỉ cập nhật nếu storm_max_wind là số hợp lệ
     if pd.notna(storm_max_wind) and storm_max_wind > 0:
         weather_gdf.loc[affected_idx, "max_wind"] = storm_max_wind
 
 # =======================
-# 💾 4. Ghi dữ liệu ra CSV
+# 📆 4. Thêm cột Month & Season
+# =======================
+weather_gdf["Month"] = weather_gdf["Datetime"].dt.month
+
+def assign_season(month):
+    if month in [12, 1, 2]:
+        return "Winter"
+    elif month in [3, 4, 5]:
+        return "Spring"
+    elif month in [6, 7, 8]:
+        return "Summer"
+    else:
+        return "Autumn"
+
+weather_gdf["Season"] = weather_gdf["Month"].apply(assign_season)
+
+# =======================
+# 💾 5. Ghi dữ liệu ra CSV
 # =======================
 output_path = "D:/Pycharm/weather-new/data/Processed/Regression/storm_regression_dataset.csv"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -68,7 +78,7 @@ weather_gdf.drop(columns=["geometry"]).to_csv(output_path, index=False)
 print(f"✅ Đã lưu dữ liệu tại: {output_path}")
 
 # =======================
-# 📊 5. BIỂU ĐỒ THỐNG KÊ & HỒI QUY
+# 📊 6. BIỂU ĐỒ THỐNG KÊ & HỒI QUY
 # =======================
 df = pd.read_csv(output_path)
 features = ['Rain', 'Temp', 'WindSpeed', 'Pressure', 'Humidity', 'CloudCover', 'WindDirection']
@@ -81,7 +91,7 @@ plt.xlabel("max_wind")
 plt.tight_layout()
 plt.show()
 
-# 2️⃣ Boxplot max_wind theo City (nếu muốn xem vùng bị ảnh hưởng mạnh)
+# 2️⃣ Boxplot max_wind theo City (chỉ lấy điểm có bão)
 plt.figure(figsize=(10, 5))
 sns.boxplot(data=df[df["max_wind"] > 0], x="City", y="max_wind", color="skyblue")
 plt.title("max_wind theo từng City (chỉ lấy điểm có bão)")

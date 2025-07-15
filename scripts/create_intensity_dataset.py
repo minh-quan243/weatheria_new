@@ -86,7 +86,24 @@ for idx, storm in tqdm(storm_gdf.iterrows(), total=storm_gdf.shape[0]):
     )
 
 # ================================
-# 💾 6. Ghi dữ liệu ra CSV
+# 📆 6. Thêm cột tháng và mùa
+# ================================
+weather_gdf["Month"] = weather_gdf["Datetime"].dt.month
+
+def assign_season(month):
+    if month in [12, 1, 2]:
+        return "Winter"
+    elif month in [3, 4, 5]:
+        return "Spring"
+    elif month in [6, 7, 8]:
+        return "Summer"
+    else:
+        return "Autumn"
+
+weather_gdf["Season"] = weather_gdf["Month"].apply(assign_season)
+
+# ================================
+# 💾 7. Ghi dữ liệu ra CSV
 # ================================
 out_path = "D:/Pycharm/weather-new/data/Processed/Intensity/storm_intensity_dataset.csv"
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -97,14 +114,14 @@ weather_gdf.drop(columns=["geometry"]).to_csv(out_path, index=False)
 print(f"✅ Đã lưu dữ liệu tại: {out_path}")
 
 # ================================
-# 📊 7. VẼ BIỂU ĐỒ THỐNG KÊ
+# 📊 8. VẼ BIỂU ĐỒ THỐNG KÊ
 # ================================
 df = pd.read_csv(out_path)
-features = ['Rain', 'Temp', 'WindSpeed', 'Pressure', 'Humidity', 'CloudCover', 'WindDirection']
+features = ['Rain', 'Temp', 'WindSpeed', 'Pressure', 'Humidity', 'CloudCover', 'WindDirection', 'Month']
 
-# 1️⃣ Countplot
+# 1️⃣ Countplot theo storm_category
 plt.figure(figsize=(6, 4))
-sns.countplot(x="storm_onset", hue="storm_onset", data=df, palette="Set2", legend=False)
+sns.countplot(x="storm_category", hue="storm_category", data=df, palette="Set2", legend=False)
 plt.title("Phân bố điểm theo cấp độ bão (storm_category)")
 plt.xlabel("Cấp độ bão")
 plt.ylabel("Số lượng điểm")
@@ -117,7 +134,7 @@ plt.suptitle("Phân bố các đặc trưng thời tiết")
 plt.tight_layout()
 plt.show()
 
-# 4️⃣ Heatmap tương quan
+# 3️⃣ Heatmap tương quan
 plt.figure(figsize=(8, 6))
 corr = df[features + ["storm_category"]].corr()
 sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f")

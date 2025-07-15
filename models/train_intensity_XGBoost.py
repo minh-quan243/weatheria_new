@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
@@ -10,16 +11,19 @@ from sklearn.metrics import (
 )
 from sklearn.preprocessing import LabelEncoder, StandardScaler, label_binarize
 from sklearn.utils.class_weight import compute_class_weight
-import numpy as np
+import os
 
 # ========================
 # 📥 1. Load dữ liệu
 # ========================
 df = pd.read_csv("D:/Pycharm/weather-new/data/Processed/Intensity/storm_intensity_dataset.csv")
 
-features = ['Rain', 'Temp', 'WindSpeed', 'Pressure', 'Humidity', 'CloudCover', 'WindDirection']
-target = 'storm_category'
+# Nếu có cột 'Season', thêm vào đặc trưng
+base_features = ['Rain', 'Temp', 'WindSpeed', 'Pressure', 'Humidity', 'CloudCover', 'WindDirection']
+extra_features = ['Month', 'Season'] if 'Month' in df.columns and 'Season' in df.columns else []
+features = base_features + extra_features
 
+target = 'storm_category'
 X = df[features]
 y = df[target]
 
@@ -41,12 +45,23 @@ X_train, X_test, y_train, y_test = train_test_split(
 # ========================
 # 🧼 4. Chuẩn hóa dữ liệu
 # ========================
+
+# Mã hóa cột Season thành số (0: Winter, 1: Spring, 2: Summer, 3: Autumn)
+season_mapping = {'Winter': 0, 'Spring': 1, 'Summer': 2, 'Autumn': 3}
+X_train['Season'] = X_train['Season'].map(season_mapping)
+X_test['Season'] = X_test['Season'].map(season_mapping)
+
+# Chuẩn hóa dữ liệu
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
+# Giữ lại tên cột cho XGBoost
+X_train_scaled = pd.DataFrame(X_train_scaled, columns=features)
+X_test_scaled = pd.DataFrame(X_test_scaled, columns=features)
+
 # ========================
-# ⚖️ 5. Tính sample_weight theo class hiếm
+# ⚖️ 5. Tính sample_weight
 # ========================
 class_weights = compute_class_weight(
     class_weight='balanced',
@@ -100,24 +115,3 @@ cm = confusion_matrix(y_test_true, y_pred_true, labels=class_labels)
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=class_labels, yticklabels=class_labels)
 plt.title("Confusion Matrix")
 plt.xlabel("Dự đoán")
-plt.ylabel("Thực tế")
-plt.tight_layout()
-plt.show()
-
-# ========================
-# 🌟 9. Feature Importance
-# ========================
-plt.figure(figsize=(8, 6))
-plot_importance(model, importance_type='gain', show_values=False)
-plt.title("Feature Importance (Gain) - XGBoost")
-plt.tight_layout()
-plt.show()
-
-# ========================
-# 💾 10. Lưu mô hình, encoder và scaler
-# ========================
-joblib.dump(model, "model_use/storm_intensity_xgboost.pkl")
-joblib.dump(le, "model_use/label_encoder_intensity.pkl")
-joblib.dump(scaler, "model_use/scaler_intensity.pkl")
-
-print("✅ Đã lưu mô hình, label encoder và scaler vào thư mục model_use/")

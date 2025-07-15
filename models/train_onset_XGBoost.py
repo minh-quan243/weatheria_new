@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import shap
 import joblib
+import os
 
 from xgboost import XGBClassifier, plot_importance
 from sklearn.model_selection import train_test_split
@@ -13,13 +14,20 @@ from sklearn.metrics import (
     precision_score, recall_score, f1_score
 )
 
+# ============================
 # 🧠 1. TẢI DỮ LIỆU
+# ============================
 df = pd.read_csv("D:/Pycharm/weather-new/data/Processed/Onset/storm_onset_dataset.csv", parse_dates=["Datetime"])
+
+# 2. CHUYỂN CỘT "Season" SANG DẠNG SỐ
+season_mapping = {'Winter': 0, 'Spring': 1, 'Summer': 2, 'Autumn': 3}
+df['Season'] = df['Season'].map(season_mapping)
 
 # ✂️ 2. CHỌN ĐẶC TRƯNG & NHÃN
 features = [
     'Rain', 'Temp', 'WindSpeed', 'Pressure',
-    'Humidity', 'CloudCover', 'WindDirection'
+    'Humidity', 'CloudCover', 'WindDirection',
+    'Month', 'Season'  # Đảm bảo 'Season' đã được mã hóa thành số
 ]
 target = "storm_onset"
 
@@ -49,20 +57,22 @@ model = XGBClassifier(
 )
 model.fit(X_train, y_train)
 
+# ============================
 # 📊 6. DỰ ĐOÁN & ĐÁNH GIÁ
+# ============================
 y_pred = model.predict(X_test)
 y_proba = model.predict_proba(X_test)[:, 1]
 
 print("📈 Classification Report:\n", classification_report(y_test, y_pred))
-print("✅ Accuracy:", accuracy_score(y_test, y_pred))
+print("✅ Accuracy :", accuracy_score(y_test, y_pred))
 print("🎯 Precision:", precision_score(y_test, y_pred))
-print("🔁 Recall:", recall_score(y_test, y_pred))
-print("🏁 F1 Score:", f1_score(y_test, y_pred))
-print("📉 ROC AUC:", roc_auc_score(y_test, y_proba))
+print("🔁 Recall   :", recall_score(y_test, y_pred))
+print("🏁 F1 Score :", f1_score(y_test, y_pred))
+print("📉 ROC AUC :", roc_auc_score(y_test, y_proba))
 
 # 🔍 7. Confusion Matrix
-cm = confusion_matrix(y_test, y_pred)
 plt.figure(figsize=(5, 4))
+cm = confusion_matrix(y_test, y_pred)
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
 plt.title("Confusion Matrix")
 plt.xlabel("Dự đoán")
@@ -90,6 +100,9 @@ plt.title("Feature Importance (Gain) - XGBoost")
 plt.tight_layout()
 plt.show()
 
-# 💾 10. LƯU MÔ HÌNH
+# ============================
+# 💾 11. LƯU MÔ HÌNH
+# ============================
+os.makedirs("model_use", exist_ok=True)
 joblib.dump(model, "model_use/onset_model_xgboost.pkl")
 print("✅ Đã lưu mô hình vào: model_use/onset_model_xgboost.pkl")
